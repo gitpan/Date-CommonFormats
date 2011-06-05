@@ -1,5 +1,8 @@
 Revision history for Date-CommonFormats
 
+0.02    Sun Jun 5 12:00:00 PDT 2011
+        - Fixed Makefile.PL dependencies
+
 0.01    Tue May 31 11:17:02 PDT 2011
         - First version, released on an unsuspecting world.
 

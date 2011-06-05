@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Date-CommonFormats
-version:            0.01
+version:            0.02
 abstract:           Common date formats made simple.
 author:
     - Chris Fulton <chris@masonqm.com>
@@ -11,7 +11,10 @@ configure_requires:
 build_requires:
     ExtUtils::MakeMaker:  0
 requires:
-    Test::More:  0
+    Date::Calc:    0
+    Date::Format:  0
+    Date::Parse:   0
+    Test::More:    0
 no_index:
     directory:
         - t
