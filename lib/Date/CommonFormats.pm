@@ -6,6 +6,8 @@ require Exporter;
 use Date::Format;
 use Date::Parse;
 use Date::Calc qw (Month_to_Text English_Ordinal Day_of_Week Day_of_Week_to_Text);
+use DateTime::Format::MySQL;
+use Carp;
 
 =head1 NAME
 
@@ -13,11 +15,11 @@ Date::CommonFormats - Common date formats made simple.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.04
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
@@ -30,8 +32,10 @@ very common types of dates used on web pages and in RSS feeds.
 	print format_date_rss($datetime);
 	print format_date_usenglish_long_ampm($datetime);
 
-Most of these functions expect as input a date or datetime value in 
-the standard mysql format such as 2011-01-02 or 2011-02-02 01:02:03.
+Most of these functions expect as input a datetime value in 
+the standard mysql format such as 2011-02-02 01:02:03.
+format_date_integer  and format_date_usenglish can 
+accept date or datetime
 
 =head1 EXPORT
 
@@ -63,6 +67,7 @@ Use this function for reducing a date or datetime to an integer useful
 in comparisons.
 
 if (format_date_integer($date1) > format_date_integer($date2)) {
+if (format_date_integer($datetime1) > format_date_integer($datetime2)) {
 
 	...
 }
@@ -71,14 +76,22 @@ if (format_date_integer($date1) > format_date_integer($date2)) {
 
 #"%Y%m%d%H%M%S"
 ### this one shouldn't require any external module, mysql dates should convert happily to comparable number
-### make sure you provide datetime or timestamp, not just date or your comparisons won't work right
 sub format_date_integer {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);	
+
+	### $dt isn't really used we just use DateTime::Format::MySQL to validate the date format
+	if (length($datetime) == 10) {
+		my $dt = DateTime::Format::MySQL->parse_date( $datetime );
+	} else {
+		my $dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+	}
+
+	my ($date, $time) = split(" ", $datetime);
 	my @datevals = split("-", $date);
+	$time ||= "00:00:00";
 	my @timevals = split(":", $time);
 	my $retval = join("", @datevals) . join("", @timevals);
+
 	return $retval;
 }
 
@@ -86,7 +99,7 @@ sub format_date_integer {
 
 Use this for formatting dates in the proper format for an RSS feed.
 
-my $rss_formatted_date = format_date_rss($date);
+my $rss_formatted_date = format_date_rss($datetime);
 
 =cut
 
@@ -95,12 +108,12 @@ my $rss_formatted_date = format_date_rss($date);
 #Tue, 03 Jun 2003 09:39:21 GMT
 sub format_date_rss {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);	
-	my ($year, $month, $day) = split("-", $date);
-	my ($hour, $minute, $second) = split(":", $time);
+
+	my $dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+
 	my $timezone = time2str("%Z", str2time($datetime));
-	my @datevals = (Day_of_Week_to_Text(Day_of_Week($year,$month,$day)), $day, Month_to_Text($month), $year,$hour,$minute,$second, $timezone);
+
+	my @datevals = (Day_of_Week_to_Text(Day_of_Week($dt->year,$dt->month,$dt->day)), $dt->day, Month_to_Text($dt->month), $dt->year,$dt->hour,$dt->minute,$dt->second, $timezone);
 	my $retval = sprintf("%.3s, %02d %s %d %02d:%02d:%02d %s", @datevals);
 	return $retval;
 }
@@ -111,6 +124,7 @@ Use this for formatting dates in US English similar to what you would
 see in a US newspaper or blog entry.
 
 my $formatted_date = format_date_usenglish($date);
+my $formatted_date = format_date_usenglish($datetime);
 
 =cut
 
@@ -118,15 +132,20 @@ my $formatted_date = format_date_usenglish($date);
 ## this one can accept mysql date or mysql datetime or mysql timestamp
 sub format_date_usenglish {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);	
-	my ($year, $month, $day) = split("-", $date);
-	my $string = sprintf("%.3s %s, %d",
-		Month_to_Text($month),
-		English_Ordinal($day),
-		$year
+
+	my $dt;
+	if (length($datetime) == 10) {
+		$dt = DateTime::Format::MySQL->parse_date( $datetime );
+	} else {
+		$dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+	}
+
+	my $retval = sprintf("%.3s %s, %d",
+		Month_to_Text($dt->month),
+		English_Ordinal($dt->day),
+		$dt->year
 	);
-	return $string;
+	return $retval;
 }
 
 =head2 format_date_usenglish_long_ampm
@@ -135,31 +154,31 @@ Use this for formatting dates in US English similar to what you would
 see in a US newspaper or blog entry. This is the same as usenglish 
 except it includes the time in AM/PM format.
 
-my $formatted_date = format_date_usenglish_long_ampm($date);
+my $formatted_date = format_date_usenglish_long_ampm($datetime);
 
 =cut
 
 #Dec 22nd, 1956 09:23 PM
 sub format_date_usenglish_long_ampm {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);	
-	my ($year, $month, $day) = split("-", $date);
-	my ($hour, $minute, $second) = split(":", $time);
+
+	my $dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+
 	my $ampm = 'AM';
+	my $hour = $dt->hour;
 	if ($hour >= 12) {
 		$hour -= 12;
 		$ampm = 'PM';
 	}
 	$hour = 12 unless $hour;
-	my $string = sprintf("%.3s %s, %d %02d:%02d %s",
-		Month_to_Text($month),
-		English_Ordinal($day),
-		$year,
-		$hour, $minute,
+	my $retval = sprintf("%.3s %s, %d %02d:%02d %s",
+		Month_to_Text($dt->month),
+		English_Ordinal($dt->day),
+		$dt->year,
+		$hour, $dt->minute,
 		$ampm
 	);
-	return $string;
+	return $retval;
 }
 
 =head2 format_date_cms_publishdate
@@ -169,31 +188,31 @@ useful in a CRUD list screen where you need to see and sort by
 datetime but need to conserve space on the page by keeping your 
 columns narrow.
 
-my $formatted_date = format_date_cms_publishdate($date);
+my $formatted_date = format_date_cms_publishdate($datetime);
 
 =cut
 
 #Dec 22nd, 1956 09:23 PM
 sub format_date_cms_publishdate {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);	
-	my ($year, $month, $day) = split("-", $date);
-	my ($hour, $minute, $second) = split(":", $time);
+
+	my $dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+
 	my $ampm = 'AM';
+	my $hour = $dt->hour;
 	if ($hour >= 12) {
 		$hour -= 12;
 		$ampm = 'PM';
 	}
 	$hour = 12 unless $hour;
-	my $string = sprintf("%02d-%02d-%d %02d:%02d %s",
-		$month,
-		$day,
-		$year,
-		$hour, $minute,
+	my $retval = sprintf("%02d-%02d-%d %02d:%02d %s",
+		$dt->month,
+		$dt->day,
+		$dt->year,
+		$hour, $dt->minute,
 		$ampm
 	);
-	return $string;
+	return $retval;
 }
 
 =head2 format_date_w3c
@@ -202,7 +221,7 @@ Use this for formatting dates in the W3C accepted format as
 described by ISO 8601. This can be useful for certain XML 
 applications.
 
-my $formatted_date = format_date_w3c($date);
+my $formatted_date = format_date_w3c($datetime);
 
 =cut
 
@@ -211,16 +230,16 @@ my $formatted_date = format_date_w3c($date);
 
 sub format_date_w3c {
 	my $datetime = shift;
-	return "" if !$datetime || $datetime eq "0000-00-00 00:00:00" || $datetime eq "0000-00-00";
-	my ($date, $time) = split(" ", $datetime);
-	my ($year, $month, $day) = split("-", $date);
-	my ($hour, $minute, $second) = split(":", $time);
+
+	my $dt = DateTime::Format::MySQL->parse_datetime( $datetime );
+
 	my $timezone = time2str("%z", str2time($datetime));
 	my $tz_firstpart = substr $timezone,0,3;
 	my $tz_secondpart = substr $timezone,3,2;
 	my $tz_finalstring = $tz_firstpart . ":" . $tz_secondpart;
-	my @datevals = ($year,$month,$day,"T",$hour,$minute,$second, $tz_finalstring);
-	my $retval = sprintf("%d-%02d-%02d%s%02d:%02d:%02d%s", @datevals);
+
+	my @datevals = ($dt->year,$dt->month,$dt->day,"T",$dt->hour,$dt->minute,$dt->second, $tz_finalstring);
+	my $retval = sprintf("%04d-%02d-%02d%s%02d:%02d:%02d%s", @datevals);
 	return $retval;
 }
 
