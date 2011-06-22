@@ -15,11 +15,11 @@ Date::CommonFormats - Common date formats made simple.
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -97,14 +97,13 @@ sub format_date_integer {
 
 =head2 format_date_rss
 
-Use this for formatting dates in the proper format for an RSS feed.
+Use this for formatting dates in the proper format for an RSS feed. In other words: RFC-822.
 
 my $rss_formatted_date = format_date_rss($datetime);
 
 =cut
 
 #"%a, %e %B %Y %T %Z"
-#Tue, 12 January 2010 09:11:32 PST
 #Tue, 03 Jun 2003 09:39:21 GMT
 sub format_date_rss {
 	my $datetime = shift;
@@ -114,7 +113,7 @@ sub format_date_rss {
 	my $timezone = time2str("%Z", str2time($datetime));
 
 	my @datevals = (Day_of_Week_to_Text(Day_of_Week($dt->year,$dt->month,$dt->day)), $dt->day, Month_to_Text($dt->month), $dt->year,$dt->hour,$dt->minute,$dt->second, $timezone);
-	my $retval = sprintf("%.3s, %02d %s %d %02d:%02d:%02d %s", @datevals);
+	my $retval = sprintf("%.3s, %02d %.3s %d %02d:%02d:%02d %s", @datevals);
 	return $retval;
 }
 

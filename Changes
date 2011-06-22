@@ -1,5 +1,8 @@
 Revision history for Date-CommonFormats
 
+0.05    Wed Jun 22 14:00:00 PDT 2011
+        - Fixed bug in RSS Date Format
+
 0.04    Mon Jun 13 17:00:00 PDT 2011
         - Added DateTime::Format::MySQL for format checking
 	- Fixed bug in w3c year - was not padding 4 spaces

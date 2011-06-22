@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Date-CommonFormats
-version:            0.04
+version:            0.05
 abstract:           Common date formats made simple.
 author:
     - Chris Fulton <chris@masonqm.com>
